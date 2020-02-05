@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <button onclick='getData()'>注册</button>
+    <button onclick='checkUser()'>昵称检查唯一性</button>
+    <button onclick='login()'>登录</button>
+    <script>
+        function getData () {
+            ajax('POST', 'http://localhost:3001/userRegister', {
+                userId: '00000003',
+                userNick: 'mm',
+                password: '123456',
+                email: '123@qq.com',
+                phone: '18227191234',
+                userSex: '0'
+            })
+        }
+
+        function checkUser () {
+            ajax('GET', 'http://localhost:3001/checkUser?userNick=m')
+        }
+
+        function login() {
+            ajax('GET', 'http://localhost:3001/userLogin?phone=18227192769&password=123456')
+        }
+        
+        
+        function ajax (type = 'GET', url= '', data = null) {
+            return new Promise ((res, rej) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open(type, url, true);
+                xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+                xhr.onreadystatechange = () => {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            res(xhr.responseText);
+                        } else {
+                            rej('请求失败!');
+                        }
+                    }
+                }
+                xhr.send(JSON.stringify( data ));
+            })
+            
+        }
+    </script>
+</body>
+</html>
+
