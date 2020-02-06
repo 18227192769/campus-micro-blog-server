@@ -67,9 +67,10 @@ path.set('/checkPhone', {
 
 // 登录
 function userLogin (request, response) {
+    response.setHeader('Content-type', 'application/json;charset=utf-8');
     const { phone, password } = url.parse(request.url, true).query;
     userDao.login(phone, (data) => {
-        let responseObj = null;
+        let responseObj = 1;
         if (!data.length) {
             responseObj = {
                 status: 'fail',
@@ -77,10 +78,22 @@ function userLogin (request, response) {
             }
         } else {
             const deCodePassword = cipher.getDeCodeData(data[0].password);
-            const msg = (password === deCodePassword) ? 'login success' : 'password error';
-            // response.cookie("userPhone", data[0].phone);
+            let msg = 'password error';
+            if (password === deCodePassword) {
+                msg = 'login success';
+                userDao.selectUserInfo(phone, (data) => {
+                    responseObj = {
+                        status: 'success',
+                        msg,
+                        data
+                    }
+                    response.write( JSON.stringify(responseObj) );
+                    response.end();
+                })
+                return;
+            }
             responseObj = {
-                status: 'success',
+                status: 'fail',
                 msg
             }
         }
@@ -92,6 +105,42 @@ function userLogin (request, response) {
 path.set('/userLogin', {
     type: 'get',
     fn: userLogin
+})
+
+// 查询用户信息
+function selectUserInfo (request, response) {
+    response.setHeader('Content-type', 'application/json;charset=utf-8');
+    const { phone } = url.parse(request.url, true).query;
+    userDao.selectUserInfo(phone, (data) => {
+        response.write( JSON.stringify({
+            msg: 'ok',
+            status: 'success',
+            data
+        }) )
+        response.status(200);
+        response.end();
+    })
+}
+path.set('/selectUserInfo', {
+    type: 'get',
+    fn: selectUserInfo
+})
+
+// 设置用户信息
+function setUserInfo (request, response) {
+    const userInfo = request.body;
+    userDao.saveUserInfo(userInfo, (data) => {
+        response.write( JSON.stringify({
+            msg: 'ok',
+            status: 'success'
+        }) )
+        response.end();
+    })
+}
+
+path.set('/setUserInfo', {
+    type: 'post',
+    fn: setUserInfo
 })
 
 module.exports = {

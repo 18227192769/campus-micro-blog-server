@@ -10,6 +10,23 @@ function createConnection () {
     })
 }
 
+function baseDB (sqlString, params) {
+    return new Promise((resolve, reject) => {
+        const db = createConnection();
+        db.connect();
+        db.query(sqlString, params, (err, data) => {
+            if (err) {
+                console.log(err);
+                reject(err);
+                return;
+            }
+            resolve(data)
+        });
+        db.end();
+    })
+}
+
 module.exports = {
-    createConnection
+    createConnection,
+    baseDB
 }

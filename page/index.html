@@ -10,7 +10,15 @@
     <button onclick='getData()'>注册</button>
     <button onclick='checkUser()'>昵称检查唯一性</button>
     <button onclick='login()'>登录</button>
+    <form action="/pushDynamicNineImg" method="POST" enctype="multipart/form-data">
+        <input type="file" name="imgFiles" multiple>
+        <input type="submit">
+    </form>
+    
+
     <script>
+
+
         function getData () {
             ajax('POST', 'http://localhost:3001/userRegister', {
                 userId: '00000003',

@@ -84,9 +84,45 @@ function login (phone, callback) {
     db.end();
 }
 
+// 查询用户信息
+function selectUserInfo (phone, callback) {
+    const db = createConnection();
+    const sqlString = 'select * from userInfo where phone=?'
+    db.connect();
+    db.query(sqlString, [phone], (err, data) => {
+        if (err){
+            console.log(err);
+            return;
+        }
+        console.log(data);
+        typeof callback === 'function' && callback(data);
+    });
+    db.end();
+}
+
+// 保存用户信息
+function saveUserInfo (userInfo, callback) {
+    const db = createConnection();
+    const { userPhone, userNick, userName, userSex, userAge, userSign, QQ, email } = userInfo
+    const sqlString = 'update userInfo set userNick=?,userName=?,userSex=?,userAge=?,userSign=?,QQ=?,email=? where phone=?'
+    const params = [userNick, userName, userSex, userAge, userSign, QQ, email, userPhone];
+    db.connect();
+    db.query(sqlString, params, (err, data) => {
+        if (err){
+            console.log(err);
+            return;
+        }
+        console.log(data);
+        typeof callback === 'function' && callback(data);
+    });
+    db.end();
+}
+
 module.exports = {
     insertUserInfo,
     isAlready_userNick,
     isAlready_phone,
-    login
+    login,
+    saveUserInfo,
+    selectUserInfo
 }

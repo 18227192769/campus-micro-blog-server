@@ -22,13 +22,20 @@ function init (app) {
 }
 
 function initApi (app, controllerKey, controllerValue) {
-    const { type, fn } = controllerValue;
+    const { type, middleware, fn } = controllerValue;
     switch (type) {
         case 'get': 
             app.get(controllerKey, fn);
             break;
         case 'post':
-            app.post(controllerKey, fn)
+            app.post(controllerKey, fn);
+            break;
+        case 'get-m':
+            app.get(controllerKey, middleware, fn);
+            break;
+        case 'post-m':
+            app.post(controllerKey, middleware, fn);
+            break;
     }
 }
 
