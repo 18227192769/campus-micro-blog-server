@@ -1,4 +1,5 @@
 const dynamicDao = require("../dao/dynamicDao");
+const userDao = require('../dao/userDao');
 const multer = require('multer');
 const upload = multer({ dest: './resource/img/' });
 const fs = require('fs');
@@ -6,6 +7,15 @@ const url = require('url');
 
 
 const path = new Map();
+const successInfo = {
+    msg: 'ok',
+    status: 'success'
+}
+const failInfo = {
+    msg: 'error',
+    status: 'fail'
+}
+
 // 获取话题列表
 function getTopicList (request, response) {
     dynamicDao.selectTopicList_topic()
@@ -30,10 +40,24 @@ path.set('/getTopicList', {
     fn: getTopicList
 })
 
-// 获取动态列表 -- 阅读量最多的5个
-async function getDynamicInfoByReadNum (request, response) {
+// 获取评论信息
+async function getCommentInfo (id) {
+    const commentInfo = await dynamicDao.selectComment(id);
+    const promiseTaskArr = commentInfo.map(async item => {
+        if (!item) return;
+        const commentUserInfo = await dynamicDao.selectUserInfo(item.commentUserPhone);
+        return {
+            ...item,
+            ...commentUserInfo[0]
+        }
+    })
+    const result = await Promise.all(promiseTaskArr);
+    return result
+}
+
+async function getDynamicInfo (fn, response) {
     // 查询动态
-    const result = await dynamicDao.selectDynamicInfoByReadNum();
+    const result = await fn.targetDao(fn.params);
     if (result.Error) {
         response.status(500);
         response.write( JSON.stringify({
@@ -62,8 +86,14 @@ async function getDynamicInfoByReadNum (request, response) {
             console.log('查询出错啦！');
             return;
         }
+        const commentList = await getCommentInfo(id);
         // 拼接用户数据
-        return {...item, ...userInfo[0], imgFilePath: imgSrc};
+        return {
+            ...item, 
+            ...userInfo[0], 
+            imgFilePath: imgSrc, 
+            commentList: Object.values(commentList)
+        }
     })
     Promise.all(resultPromiseSet)
         .then(data => {
@@ -76,9 +106,30 @@ async function getDynamicInfoByReadNum (request, response) {
             response.end();
         })
 }
+
+// 获取动态列表 -- 阅读量最多的5个
+function getDynamicInfoByReadNum (request, response) {
+    getDynamicInfo({ 
+        targetDao: dynamicDao.selectDynamicInfoByReadNum,
+        params: null
+    }, response);
+}
 path.set('/getDynamicInfoByReadNum', {
     type: 'get',
     fn: getDynamicInfoByReadNum
+})
+
+// 获取用户动态列表
+function getDynamicInfoByUserPhone (request, response) {
+    const { phone } = url.parse(request.url, true).query;
+    getDynamicInfo({ 
+        targetDao: dynamicDao.selectDynamicInfoByUserPhone,
+        params: phone
+    }, response);
+}
+path.set('/getDynamicInfoByUserPhone', {
+    type: 'get',
+    fn: getDynamicInfoByUserPhone
 })
 
 // 发表动态 & 纯文本
@@ -86,7 +137,7 @@ function pushDynamic (request, response) {
     const dynamicInfo = request.body;
     console.log(dynamicInfo);
     dynamicDao.insertDynamic(dynamicInfo)
-        .then(data => {
+        .then(async data => {
             console.log(data);
             const result = data.affectedRows && data.affectedRows === 1;
             if (!result) {
@@ -96,6 +147,9 @@ function pushDynamic (request, response) {
                     status: 'fail'
                 }) )
             }
+            const dynamicNumSet = await dynamicDao.countDynamicNum(dynamicInfo.phone);
+            userDao.updateUserDynamicNum(dynamicInfo.phone, dynamicNumSet[0].dynamicNum);
+
             response.status(200);
             response.write( JSON.stringify({
                 msg: 'ok',
@@ -116,7 +170,7 @@ function pushDynamicBigImg (request, response) {
     console.log(request);
     const { filename, path:src, size } = request.file;
     Promise.all([ dynamicDao.insertDynamic(dynamicInfo), dynamicDao.insertBigImg(id, src) ])
-        .then(data => {
+        .then(async data => {
             const result = data.every(item => item.affectedRows && item.affectedRows === 1);
             if (!result) {
                 response.status(500)
@@ -125,6 +179,10 @@ function pushDynamicBigImg (request, response) {
                     status: 'fail'
                 }) )
             }
+            const dynamicNumSet = await dynamicDao.countDynamicNum(dynamicInfo.phone);
+            console.log(dynamicNumSet);
+            userDao.updateUserDynamicNum(dynamicInfo.phone, dynamicNumSet[0].dynamicNum);
+
             response.status(200);
             response.write( JSON.stringify({
                 msg: 'ok',
@@ -145,7 +203,7 @@ function pushDynamicNineImg (request, response) {
     const { id } = dynamicInfo;
     const srcArr = request.files.map(item => item.path);
     Promise.all([ dynamicDao.insertDynamic(dynamicInfo), dynamicDao.insertNineImg(id, srcArr) ])
-        .then(data => {
+        .then(async data => {
             const result = data.every(item => item.affectedRows && item.affectedRows === 1);
             if (!result) {
                 response.status(500)
@@ -153,7 +211,12 @@ function pushDynamicNineImg (request, response) {
                     msg: 'error',
                     status: 'fail'
                 }) )
+                response.end();
             }
+            const dynamicNumSet = await dynamicDao.countDynamicNum(dynamicInfo.phone);
+            console.log(dynamicNumSet);
+            userDao.updateUserDynamicNum(dynamicInfo.phone, dynamicNumSet[0].dynamicNum);
+
             response.status(200);
             response.write( JSON.stringify({
                 msg: 'ok',
@@ -166,6 +229,120 @@ path.set('/pushDynamicNineImg', {
     type: 'post-m',
     middleware: upload.array("imgFiles"),
     fn: pushDynamicNineImg
+})
+
+// 转发动态
+function refDynamic (request, response) {
+    const paramsData = request.body;
+    dynamicDao.insertDynamic_ref(paramsData).then(async result => {
+        if (result.affectedRows !== 0) {
+            // 更新用户动态数
+            const dynamicNumSet = await dynamicDao.countDynamicNum(paramsData.phone);
+            userDao.updateUserDynamicNum(paramsData.phone, dynamicNumSet[0].dynamicNum);
+            response.status(200);
+            response.write(JSON.stringify({
+                ...successInfo
+            }))
+        } else {
+            response.status(500);
+            response.write(JSON.stringify({
+                ...failInfo
+            }))
+        }
+        response.end()
+    })
+}
+path.set('/refDynamic', {
+    type: 'post',
+    fn: refDynamic
+})
+
+// 存储大图
+function saveBigImage (request, response) {
+    const { id, src } = request.body;
+    dynamicDao.insertBigImg(id, src).then(result => {
+        if (result.affectedRows !== 0) {
+            response.status(200);
+            response.write(JSON.stringify({
+                ...successInfo
+            }))
+        } else {
+            response.status(500);
+            response.write(JSON.stringify({
+                ...failInfo
+            }))
+        }
+        response.end()
+    })
+}
+path.set('/saveBigImage', {
+    type: 'post',
+    fn: saveBigImage
+})
+
+// 存储九宫格
+function saveNineImg (request, response) {
+    const { id, srcArr } = request.body;
+    dynamicDao.insertNineImg(id, srcArr).then(result => {
+        if (result.affectedRows !== 0) {
+            response.status(200);
+            response.write(JSON.stringify({
+                ...successInfo
+            }))
+        } else {
+            response.status(500);
+            response.write(JSON.stringify({
+                ...failInfo
+            }))
+        }
+        response.end()
+    })
+}
+path.set('/saveNineImg', {
+    type: 'post',
+    fn: saveNineImg
+})
+
+// 发表评论
+function pushComment (request, response) {
+    const commentData = request.body;
+    dynamicDao.insertComment(commentData).then(result => {
+        if (result.affectedRows !== 0) {
+            response.status(200);
+            response.write(JSON.stringify({
+                ...successInfo
+            }))
+        } else {
+            response.status(500);
+            response.write(JSON.stringify({
+                ...failInfo
+            }))
+        }
+        response.end()
+    })
+}
+path.set('/pushComment', {
+    type: 'post',
+    fn: pushComment
+})
+
+// 删除评论
+function delComment (request, response) {
+    const { id } = request.body;
+    dynamicDao.deleteComment(id).then(result => {
+        if (result.affectedRows !== 1) {
+            response.status(500);
+            response.write(JSON.stringify(failInfo));
+        } else {
+            response.status(200);
+            response.write(JSON.stringify(successInfo));
+        }
+        response.end();
+    })
+}
+path.set('/delComment', {
+    type: 'post',
+    fn: delComment
 })
 
 // 获取图片
@@ -186,5 +363,30 @@ path.set('/getPic', {
     fn: getPic
 })
 
+// 点赞
+function addLike (request, response) {
+    const { id, likeNum } = request.body;
+    dynamicDao.updateDynamicLikeNum(id, likeNum)
+        .then(data => {
+            if (data.affectedRows && data.affectedRows === 1) {
+                response.status(200);
+                response.write( JSON.stringify({
+                    msg: 'ok',
+                    status: 'success'
+                }) )
+                response.end();
+            }
+            response.status(500);
+            response.write( JSON.stringify({
+                msg: 'error',
+                status: 'fail'
+            }) )
+            response.end();
+        })
+}
+path.set('/addLike', {
+    type: 'post',
+    fn: addLike
+})
 
 module.exports.path = path

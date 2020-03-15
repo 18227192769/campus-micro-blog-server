@@ -1,4 +1,4 @@
-const { createConnection } = require('./dbutil');
+const { createConnection, baseDB } = require('./dbutil');
 const cipher = require('../tools/cipher');
 
 // 注册
@@ -118,11 +118,110 @@ function saveUserInfo (userInfo, callback) {
     db.end();
 }
 
+// 更新用户头像
+function updateUserAvatarImage (phone, imgFile) {
+    const sqlString = 'update userInfo set userImage=? where phone=?'
+    return baseDB(sqlString, [imgFile, phone]);
+}
+// 更新用户背景图片
+function updateUserbackImage (phone, imgFile) {
+    const sqlString = 'update userInfo set backImage=? where phone=?'
+    return baseDB(sqlString, [imgFile, phone]);
+}
+// 查询用户头像
+function selectUserAvatarImage (phone) {
+    const sqlString = 'select userImage from userInfo where phone=?'
+    return baseDB(sqlString, [phone]);
+}
+// 查询用户背景图片
+function selectUserbackImage (phone) {
+    const sqlString = 'select backImage from userInfo where phone=?'
+    return baseDB(sqlString, [phone]);
+}
+
+// 更新用户动态数
+function updateUserDynamicNum (phone, dynamicNum) {
+    const sqlString = 'update userinfo set dynamicNum=? where phone=?';
+    return baseDB(sqlString, [ dynamicNum, phone ])
+}
+
+// 添加关注
+function inserConcern (id, userPhone, concernUserPhone) {
+    const sqlString = 'insert into concernlist values (?,?,?)'
+    return baseDB(sqlString, [id, userPhone, concernUserPhone]);
+}
+// 添加粉丝
+function inserFans (id, concernUserPhone, userPhone) {
+    const sqlString = 'insert into fanslist values (?,?,?)'
+    return baseDB(sqlString, [id, concernUserPhone, userPhone]);
+}
+// 取消关注
+function delConcern (userPhone, concernUserPhone) {
+    const sqlString = 'delete from concernlist where userPhone = ? and concernUserPhone = ?'
+    return baseDB(sqlString, [userPhone, concernUserPhone]);
+}
+// 删除粉丝
+function delFans (concernUserPhone, userPhone) {
+    const sqlString = 'delete from fanslist where userPhone = ? and fansPhone = ?'
+    return baseDB(sqlString, [concernUserPhone, userPhone]);
+}
+// 查询关注列表
+function selectConcernList (phone) {
+    const sqlString = 'select * from concernlist where userPhone = ?';
+    return baseDB(sqlString, [phone]);
+}
+// 查询粉丝列表
+function selectFansList (phone) {
+    const sqlString = 'select * from fanslist where userPhone = ?';
+    return baseDB(sqlString, [phone]);
+}
+// 查询用户基础信息
+function selectUserBaseInfo (phone) {
+    const sqlString = 'select userNick, userSign, userImage from userinfo where phone = ?';
+    return baseDB(sqlString, [phone]);
+}
+// 统计用户关注数
+function countConcernNum (phone) {
+    const sqlString = 'select count(*) as concernNum from concernlist where userPhone = ?'
+    return baseDB(sqlString, [phone]);
+}
+// 更新用户关注数
+function updateUserConcernNum (concernNum, phone) {
+    const sqlString = 'update userinfo set concernNum = ? where phone = ?';
+    return baseDB(sqlString, [concernNum, phone]);
+}
+// 统计用户粉丝数
+function countFansNum (phone) {
+    const sqlString = 'select count(*) as fansNum from fanslist where userPhone = ?'
+    return baseDB(sqlString, [phone]);
+}
+// 更新用户粉丝数
+function updateUserFansNum (fansNum, phone) {
+    const sqlString = 'update userinfo set fansNum = ? where phone = ?';
+    return baseDB(sqlString, [fansNum, phone]);
+}
+
 module.exports = {
     insertUserInfo,
     isAlready_userNick,
     isAlready_phone,
     login,
     saveUserInfo,
-    selectUserInfo
+    selectUserInfo,
+    updateUserAvatarImage,
+    updateUserbackImage,
+    updateUserDynamicNum,
+    selectUserAvatarImage,
+    selectUserbackImage,
+    inserConcern,
+    inserFans,
+    delConcern,
+    delFans,
+    selectConcernList,
+    selectFansList,
+    selectUserBaseInfo,
+    countConcernNum,
+    countFansNum,
+    updateUserConcernNum,
+    updateUserFansNum
 }

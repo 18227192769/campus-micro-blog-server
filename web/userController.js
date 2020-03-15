@@ -1,8 +1,21 @@
 const userDao = require('../dao/userDao');
 const cipher = require('../tools/cipher');
 const url = require('url');
+const multer = require('multer');
+const fs = require('fs');
+
+const upload = multer({ dest: './resource/img/' })
 
 const path = new Map();
+
+const successInfo = {
+    msg: 'ok',
+    status: 'success'
+}
+const failInfo = {
+    msg: 'error',
+    status: 'fail'
+}
 
 // 注册
 function userRegister (request, response) {
@@ -137,10 +150,170 @@ function setUserInfo (request, response) {
         response.end();
     })
 }
-
 path.set('/setUserInfo', {
     type: 'post',
     fn: setUserInfo
+})
+
+// 更新用户头像
+async function setUserImage (request, response) {
+    const { phone, type } = request.body;
+    const { path: imageFile } = request.file;
+
+    let resultPromise = null;
+    let lastImageFile = null;
+    if (type === 'userImage') {
+        lastImageFile = await userDao.selectUserAvatarImage(phone);
+        resultPromise = userDao.updateUserAvatarImage(phone, imageFile);
+    } else if (type === 'backImage') {
+        lastImageFile = await userDao.selectUserbackImage(phone);
+        resultPromise = userDao.updateUserbackImage(phone, imageFile);
+    }
+    // 如果之前存在头像则将之前的头像图片删除掉
+    const lastImagePath = lastImageFile[0].userImage;
+    if (lastImagePath) {
+        fs.unlink(`./${lastImagePath}`, (err, data) => {
+            if (err) {
+                console.log(err);
+            }
+            console.log(data);
+        })
+    } 
+    // 更新图片的异步任务
+    resultPromise.then(data => {
+        if (data.affectedRows === 1) {
+            response.status(200);
+            response.write( JSON.stringify({
+                msg: 'ok',
+                status: 'success',
+                data: {
+                    imageFile
+                }
+            }) )
+            response.end();
+            return;
+        }
+        response.status(404);
+        response.write( JSON.stringify({
+            msg: 'error',
+            status: 'fail'
+        }) )
+        response.end();
+    })
+}
+path.set('/setUserImage', {
+    type: 'post-m',
+    middleware: upload.single("imageFile"),
+    fn: setUserImage
+});
+
+// 关注
+async function concernUser (request, response) {
+    const { id, userPhone, concernUserPhone } = request.body;
+    // 添加关注
+    const concernResult = await userDao.inserConcern(id, userPhone, concernUserPhone);
+    // 统计关注数
+    const concernNumSet = await userDao.countConcernNum(userPhone);
+    // 更新关注数
+    userDao.updateUserConcernNum(concernNumSet[0].concernNum, userPhone); 
+    // 被关注者添加粉丝
+    const fansResult = await userDao.inserFans(id, concernUserPhone, userPhone);
+    // 统计粉丝数
+    const fansNumSet = await userDao.countFansNum(concernUserPhone);
+    // 更新粉丝数
+    userDao.updateUserFansNum(fansNumSet[0].fansNum, concernUserPhone); 
+
+    if (concernResult.affectedRows !== 1 || fansResult.affectedRows !== 1) {
+        response.status(500);
+        response.write(JSON.stringify(failInfo));
+    } else {
+        response.status(200);
+        response.write(JSON.stringify(successInfo));
+    }
+    response.end();
+}
+path.set('/concernUser', {
+    type: 'post',
+    fn: concernUser
+})
+
+// 取关
+ async function cancelConcern (request, response) {
+    const { userPhone, concernUserPhone } = request.body;
+    // 取消关注
+    const concernResult = await userDao.delConcern(userPhone, concernUserPhone)
+    // 统计关注数
+    const concernNumSet = await userDao.countConcernNum(userPhone);
+    // 更新关注数
+    userDao.updateUserConcernNum(concernNumSet[0].concernNum, userPhone); 
+
+    // 被关注者失去粉丝
+    const fansResult = await userDao.delFans(concernUserPhone, userPhone);
+    // 统计粉丝数
+    const fansNumSet = await userDao.countFansNum(concernUserPhone);
+    // 更新粉丝数
+    userDao.updateUserFansNum(fansNumSet[0].fansNum, concernUserPhone); 
+
+    if (concernResult.affectedRows !== 1 || fansResult.affectedRows !== 1) {
+        response.status(500);
+        response.write(JSON.stringify(failInfo));
+    } else {
+        response.status(200);
+        response.write(JSON.stringify(successInfo));
+    }
+    response.end();
+}
+path.set('/cancelConcern', {
+    type: 'post',
+    fn: cancelConcern
+})
+
+// 获取用户关注列表
+function getUserConcernList (request, response) {
+    const { phone } = url.parse(request.url, true).query;
+    userDao.selectConcernList(phone).then(result => {
+        const promiseTaskArr = result.map(async item => {
+            const { concernUserPhone } = item;
+            const userInfo = await userDao.selectUserBaseInfo(concernUserPhone);
+            return {...item, ...userInfo[0]}
+        })
+        Promise.all(promiseTaskArr).then(result => {
+            response.status(200);
+            response.write(JSON.stringify({
+                concernList: result
+            }));
+            response.end();
+        })
+        
+    })
+}
+path.set('/getUserConcernList', {
+    type: 'get',
+    fn: getUserConcernList
+})
+
+// 获取用户粉丝列表
+function getUserFansList (request, response) {
+    const { phone } = url.parse(request.url, true).query;
+    userDao.selectFansList(phone).then(result => {
+
+        const promiseTaskArr = result.map(async item => {
+            const { fansPhone  } = item;
+            const userInfo = await userDao.selectUserBaseInfo(fansPhone );
+            return {...item, ...userInfo[0]}
+        })
+        Promise.all(promiseTaskArr).then(result => {
+            response.status(200);
+            response.write(JSON.stringify({
+                fansList: result
+            }));
+            response.end();
+        })
+    })
+}
+path.set('/getUserFansList', {
+    type: 'get',
+    fn: getUserFansList
 })
 
 module.exports = {
