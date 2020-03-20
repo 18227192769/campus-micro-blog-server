@@ -200,8 +200,14 @@ function updateUserFansNum (fansNum, phone) {
     const sqlString = 'update userinfo set fansNum = ? where phone = ?';
     return baseDB(sqlString, [fansNum, phone]);
 }
+// 管理员登录
+function adminLogin (username) {
+    const sqlString = 'select password from adminlist where username = ?';
+    return baseDB(sqlString, [username])
+}
 
 module.exports = {
+    adminLogin,
     insertUserInfo,
     isAlready_userNick,
     isAlready_phone,

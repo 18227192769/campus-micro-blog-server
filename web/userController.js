@@ -316,6 +316,26 @@ path.set('/getUserFansList', {
     fn: getUserFansList
 })
 
+// 管理员登录
+function adminLogin (request, response) {
+    const { username, password } = request.body;
+    userDao.adminLogin(username).then(result => {
+        if (!result.length) {
+            response.write(JSON.stringify(failInfo))
+        } else if (result[0].password !== password) {
+            response.write(JSON.stringify(failInfo))
+        } else if (result[0].password === password) {
+            response.write(JSON.stringify(successInfo))
+        }
+        response.status(200)
+        response.end();
+    })
+}
+path.set('/adminLogin', {
+    type: 'post',
+    fn: adminLogin
+})
+
 module.exports = {
     path
 }
