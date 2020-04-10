@@ -375,6 +375,7 @@ function addLike (request, response) {
                     status: 'success'
                 }) )
                 response.end();
+                return;
             }
             response.status(500);
             response.write( JSON.stringify({
@@ -387,6 +388,33 @@ function addLike (request, response) {
 path.set('/addLike', {
     type: 'post',
     fn: addLike
+})
+
+// 阅读
+function addRead (request, response) {
+    const { id, readNum } = request.body;
+    dynamicDao.updateDynamicReadNum(id, readNum)
+        .then(data => {
+            if (data.affectedRows && data.affectedRows === 1) {
+                response.status(200);
+                response.write( JSON.stringify({
+                    msg: 'ok',
+                    status: 'success'
+                }) )
+                response.end();
+                return;
+            }
+            response.status(500);
+            response.write( JSON.stringify({
+                msg: 'error',
+                status: 'fail'
+            }) )
+            response.end();
+        })
+}
+path.set('/addRead', {
+    type: 'post',
+    fn: addRead
 })
 
 module.exports.path = path

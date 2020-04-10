@@ -78,6 +78,12 @@ function updateDynamicLikeNum (id, value) {
     return baseDB(sqlString, [value, id]);
 }
 
+// 更新动态阅读数
+function updateDynamicReadNum (id, value) {
+    const sqlString = 'update dynamic set read_num =? where id=?'
+    return baseDB(sqlString, [value, id]);
+}
+
 // 删除评论
 function deleteComment (id) {
     const sqlString = "delete from commentlist where id = ?";
@@ -99,5 +105,6 @@ module.exports = {
     insertNineImg,
     countDynamicNum,
     updateDynamicLikeNum,
+    updateDynamicReadNum,
     deleteComment
 }

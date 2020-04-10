@@ -336,6 +336,26 @@ path.set('/adminLogin', {
     fn: adminLogin
 })
 
+// 用户登录记录
+function saveLoginDate (request, response) {
+    const { id, loginDate } = request.body;
+    userDao.loginCount(id, loginDate).then(result => {
+        if (result.affectedRows === 1) {
+            response.write(JSON.stringify(successInfo))
+            response.status(200)
+            response.end();
+            return;
+        }
+        response.write(JSON.stringify(failInfo))
+        response.status(500)
+        response.end();
+    })
+}
+path.set('/saveLoginDate', {
+    type: 'post',
+    fn: saveLoginDate
+})
+
 module.exports = {
     path
 }

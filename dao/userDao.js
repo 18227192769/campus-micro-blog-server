@@ -206,6 +206,12 @@ function adminLogin (username) {
     return baseDB(sqlString, [username])
 }
 
+// 用户登录统计
+function loginCount (id, date) {
+    const sqlString = 'insert into loginCount values(?,?)';
+    return baseDB(sqlString, [id, date]);
+}
+
 module.exports = {
     adminLogin,
     insertUserInfo,
@@ -229,5 +235,6 @@ module.exports = {
     countConcernNum,
     countFansNum,
     updateUserConcernNum,
-    updateUserFansNum
+    updateUserFansNum,
+    loginCount
 }
