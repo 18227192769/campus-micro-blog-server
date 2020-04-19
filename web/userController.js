@@ -356,6 +356,22 @@ path.set('/saveLoginDate', {
     fn: saveLoginDate
 })
 
+// 获取用户登录记录
+function getLoginDate (request, response) {
+    userDao.selectLoginCount().then(result => {
+        response.status(200);
+        response.write(JSON.stringify({
+            ...successInfo,
+            data: result
+        }))
+        response.end();
+    })
+}
+path.set('/getLoginDate', {
+    type: 'get',
+    fn: getLoginDate
+})
+
 module.exports = {
     path
 }

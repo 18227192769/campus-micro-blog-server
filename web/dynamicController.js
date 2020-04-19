@@ -119,6 +119,22 @@ path.set('/getDynamicInfoByReadNum', {
     fn: getDynamicInfoByReadNum
 })
 
+// 获取全部动态
+function getAllDynamic (request, response) {
+    dynamicDao.selectAllDynamic().then(result => {
+        response.status(200);
+        response.write(JSON.stringify({
+            ...successInfo,
+            data: result
+        }))
+        response.end();
+    })
+}
+path.set('/getAllDynamic', {
+    type: 'get',
+    fn: getAllDynamic
+})
+
 // 获取用户动态列表
 function getDynamicInfoByUserPhone (request, response) {
     const { phone } = url.parse(request.url, true).query;
@@ -415,6 +431,51 @@ function addRead (request, response) {
 path.set('/addRead', {
     type: 'post',
     fn: addRead
+})
+
+// 获取评论数
+function getCommentNum (request, response) {
+    const { id } = url.parse(request.url, true).query;
+    dynamicDao.getCommentNumById(id).then(result => {
+        response.status(200);
+        response.write(JSON.stringify({
+            ...successInfo,
+            data: result[0].commentNum
+        }));
+        response.end();
+    })
+}
+path.set('/getCommentNum', {
+    type: 'get',
+    fn: getCommentNum
+})
+
+// 获取大图路径
+function getBigImg (request, response) {
+    const { id } = url.parse(request.url, true).query;
+    dynamicDao.getBigImgById(id).then(result => {
+        response.status(200);
+        response.write(JSON.stringify({
+            ...successInfo,
+            data: result[0].filepath
+        }));
+        response.end();
+    })
+}
+path.set('/getBigImg', {
+    type: 'get',
+    fn: getBigImg
+})
+
+function updateRefNum (request, response) {
+    const { id, forward_num } = request.body;
+    dynamicDao.updateRefNum(id, forward_num).then(result => {
+        console.log(result);
+    })
+}
+path.set('/updateRefNum', {
+    type: 'post',
+    fn: updateRefNum
 })
 
 module.exports.path = path

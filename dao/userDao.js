@@ -212,6 +212,11 @@ function loginCount (id, date) {
     return baseDB(sqlString, [id, date]);
 }
 
+function selectLoginCount () {
+    const sqlString = 'select * from logincount';
+    return baseDB(sqlString, []);
+}
+
 module.exports = {
     adminLogin,
     insertUserInfo,
@@ -236,5 +241,6 @@ module.exports = {
     countFansNum,
     updateUserConcernNum,
     updateUserFansNum,
-    loginCount
+    loginCount,
+    selectLoginCount
 }

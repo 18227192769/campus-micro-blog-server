@@ -54,7 +54,12 @@ function selectDynamicInfoByUserPhone (phone) {
 }
 // 查询热门动态信息 
 function selectDynamicInfoByReadNum () {
-    const sqlString = 'select * from dynamic order by read_num desc limit 5'
+    const sqlString = 'select * from dynamic order by read_num desc limit 15'
+    return baseDB(sqlString, []);
+}
+// 获取所有动态新
+function selectAllDynamic () {
+    const sqlString = 'select * from dynamic';
     return baseDB(sqlString, []);
 }
 // 查询用户信息
@@ -90,10 +95,28 @@ function deleteComment (id) {
     return baseDB(sqlString, [id]);
 }
 
+// 获取评论数
+function getCommentNumById (id) {
+    const sqlString = 'select count(*) as commentNum from commentlist where dynamicId=?';
+    return baseDB(sqlString, [id])
+}
+
+// 获取大图路径
+function getBigImgById (id) {
+    const sqlString = 'select filepath from bigimage where id=?';
+    return baseDB(sqlString, [id])
+}
+
+function updateRefNum (id, forward_num) {
+    const sqlString = 'update dynamic set forward_num =? where id=?';
+    return baseDB(sqlString, [forward_num, id]);
+}
+
 module.exports = {
     selectTopicList_topic,
     selectDynamicInfoByReadNum,
     selectDynamicInfoByUserPhone,
+    selectAllDynamic,
     selectUserInfo,
     selectBigImgPath,
     selectNineImgPath,
@@ -106,5 +129,8 @@ module.exports = {
     countDynamicNum,
     updateDynamicLikeNum,
     updateDynamicReadNum,
-    deleteComment
+    updateRefNum,
+    deleteComment,
+    getCommentNumById,
+    getBigImgById
 }

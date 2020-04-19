@@ -116,7 +116,7 @@ function getNewsItem (request, response) {
             newsImage.shift();
             newsContent.shift();
             newsImage.forEach((item, index) => {
-                if (!item) return;
+                if (!item && !newsContent[index]) return;
                 newsData.push({
                     content: newsContent[index],
                     image: item

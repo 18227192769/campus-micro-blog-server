@@ -38,7 +38,8 @@ function selectNews_contentById (id) {
 }
 
 function searchNewsByTitle (title) {
-    const sqlString = 'select * from newslist where newsTitle=?'
+    const sqlString = "select * from newslist where newsTitle like ?";
+    title = `%${title}%`;
     return baseDB(sqlString, [title])
 }
 
@@ -52,7 +53,8 @@ function searchNewsByTime (time) {
 function searchNews (title, time) {
     const startTime = `${time[0]} 00:00:00`;
     const endTime = `${time[1]} 23:59:59`;
-    const sqlString = 'select * from newslist where newsTitle=? and newsDate BETWEEN ? and ?';
+    title = `%${title}%`;
+    const sqlString = 'select * from newslist where newsTitle like ? and newsDate BETWEEN ? and ?';
     return baseDB(sqlString, [title, startTime, endTime]);
 }
 
